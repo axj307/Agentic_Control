@@ -42,11 +42,14 @@ venv.bak/
 ._*
 Thumbs.db
 
-# Logs and output files
-logs/
-*.log
+# SLURM logs (organized in slurm/logs/)
+slurm/logs/
 *.out
 *.err
+
+# Other logs
+logs/
+*.log
 
 # Large auto-generated caches
 05_training/unsloth_compiled_cache/

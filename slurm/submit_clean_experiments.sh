@@ -19,7 +19,7 @@ if [ $? -eq 0 ]; then
     echo ""
     echo "📋 Monitor progress with:"
     echo "   squeue -u $USER"
-    echo "   tail -f logs/clean_experiments_${JOB_ID}.out"
+    echo "   tail -f slurm/logs/clean_experiments_${JOB_ID}.out"
     echo ""
     echo "📁 Results will be saved to:"
     echo "   results/plots/pd_vs_tool_comparison_*.png"

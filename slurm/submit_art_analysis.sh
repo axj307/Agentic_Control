@@ -14,7 +14,7 @@ if [ $? -eq 0 ]; then
     echo ""
     echo "📋 Monitor progress with:"
     echo "   squeue -u $USER"
-    echo "   tail -f logs/art_analysis_${JOB_ID}.out"
+    echo "   tail -f slurm/logs/art_analysis_${JOB_ID}.out"
     echo ""
     echo "📁 Results will be saved to:"
     echo "   results/reports/simple_art_analysis_*.md"

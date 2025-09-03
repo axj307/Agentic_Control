@@ -54,8 +54,35 @@ tail -f logs/clean_experiments_JOBID.out
 scancel JOBID
 ```
 
+## Log Management
+
+SLURM job logs are organized in `slurm/logs/` to keep the codebase clean.
+
+### Log Commands
+```bash
+# Show recent jobs and their logs
+python slurm/manage_logs.py
+
+# Check logs status  
+python slurm/manage_logs.py --status
+
+# Show specific job summary
+python slurm/manage_logs.py --job-summary 12345
+
+# Clean old logs (keep latest 7 days)
+python slurm/manage_logs.py --clean --keep-days 7
+
+# Preview what would be cleaned
+python slurm/manage_logs.py --clean --dry-run
+```
+
+### Log Files
+- **Location**: `slurm/logs/`
+- **Format**: `{job_name}_{job_id}.out` and `{job_name}_{job_id}.err`
+- **Auto-cleanup**: Use `manage_logs.py` to prevent bloat
+
 ## Results Location
 - **Data**: `results/data/`
 - **Plots**: `results/plots/`
 - **Reports**: `results/reports/`
-- **Logs**: `logs/`
+- **SLURM Logs**: `slurm/logs/`

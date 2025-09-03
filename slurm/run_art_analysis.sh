@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=art_analysis
-#SBATCH --output=logs/art_analysis_%j.out
-#SBATCH --error=logs/art_analysis_%j.err
+#SBATCH --output=slurm/logs/art_analysis_%j.out
+#SBATCH --error=slurm/logs/art_analysis_%j.err
 #SBATCH --time=00:30:00
 #SBATCH --partition=pi_linaresr
 #SBATCH --nodes=1
@@ -37,7 +37,7 @@ echo "📊 Output: ART training projections and configuration"
 echo ""
 
 # Create output directories
-mkdir -p logs
+mkdir -p slurm/logs
 mkdir -p results/data
 mkdir -p results/reports
 
@@ -104,7 +104,7 @@ if [ $analysis_exit_code -eq 0 ]; then
 else
     echo ""
     echo "❌ ART ANALYSIS FAILED!"
-    echo "📋 Check error logs above and in logs/art_analysis_$SLURM_JOB_ID.err"
+    echo "📋 Check error logs above and in slurm/logs/art_analysis_$SLURM_JOB_ID.err"
 fi
 
 echo ""

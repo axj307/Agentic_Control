@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=agentic_control_clean
-#SBATCH --output=logs/clean_experiments_%j.out
-#SBATCH --error=logs/clean_experiments_%j.err
+#SBATCH --output=slurm/logs/clean_experiments_%j.out
+#SBATCH --error=slurm/logs/clean_experiments_%j.err
 #SBATCH --time=01:00:00
 #SBATCH --partition=pi_linaresr
 #SBATCH --nodes=1
@@ -46,7 +46,7 @@ echo "   Save Plots: $SAVE_PLOTS"
 echo ""
 
 # Create output directories
-mkdir -p logs
+mkdir -p slurm/logs
 mkdir -p results/plots
 mkdir -p results/data
 mkdir -p results/reports
@@ -116,7 +116,7 @@ if [ $experiment_exit_code -eq 0 ]; then
 else
     echo ""
     echo "❌ CLEAN EXPERIMENTS FAILED!"
-    echo "📋 Check error logs above and in logs/clean_experiments_$SLURM_JOB_ID.err"
+    echo "📋 Check error logs above and in slurm/logs/clean_experiments_$SLURM_JOB_ID.err"
 fi
 
 echo ""
