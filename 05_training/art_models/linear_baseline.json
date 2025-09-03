@@ -1,0 +1,36 @@
+{
+  "type": "linear_regression",
+  "coefficients": [
+    -0.5236947364975636,
+    -1.0283865554312037
+  ],
+  "intercept": -0.04046370353731882,
+  "training_stats": {
+    "num_samples": 3464,
+    "state_dim": 2,
+    "action_range": [
+      -1.0,
+      1.0
+    ],
+    "state_ranges": {
+      "position": [
+        -2.1392117154318187,
+        1.5270472469547733
+      ],
+      "velocity": [
+        -1.3900154625172454,
+        1.1052108162608596
+      ]
+    },
+    "mean_action": -0.0628939408777422,
+    "std_action": 0.3444056593496431,
+    "model_type": "LinearRegression",
+    "mse": 0.025162207773089456,
+    "r2_score": 0.8128698224992692,
+    "coefficients": [
+      -0.5236947364975636,
+      -1.0283865554312037
+    ],
+    "intercept": -0.04046370353731882
+  }
+}

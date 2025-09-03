@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Results and logs
+results/archive_*/
+logs/
+*.out
+*.err
+
+# Temporary files
+*.tmp
+*.temp
+.DS_Store
+.vscode/
+.idea/
+
+# Model files (keep structure, ignore large model files)
+05_training/art_models/*.pt
+05_training/art_models/*.pth
+05_training/art_models/*.pkl
+!05_training/art_models/.gitkeep
+!05_training/art_models/linear_baseline.json
+
+# Keep current results but ignore future archives
+results/data/pd_vs_tool_trajectories_*.json
+results/plots/pd_vs_tool_comparison_*.png  
+results/reports/pd_vs_tool_analysis_*.md
+
+# But keep the latest for demo purposes
+!results/data/pd_vs_tool_trajectories_20250903_152224.json
+!results/plots/pd_vs_tool_comparison_20250903_152224.png
+!results/reports/pd_vs_tool_analysis_20250903_152224.md
