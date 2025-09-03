@@ -74,6 +74,39 @@ conda activate agentic_control && python 05_training/test_basic_rollout.py
 3. **Evaluation**: Compare trained agent against baselines
 4. **Results**: Saved to `results/` directory
 
+## Checkpoint Management
+
+**Important**: Checkpoints are automatically saved to `/scratch` to avoid filling the 200GB home directory quota.
+
+### Checkpoint Configuration
+- **Location**: `/scratch/{username}/agentic_control_checkpoints/`
+- **Auto-configured**: HuggingFace transformers automatically use scratch directory
+- **Archived models**: Existing models moved to `archived_models_YYYYMMDD/`
+
+### Checkpoint Commands
+```bash
+# Check checkpoint status
+./manage_checkpoints.sh status
+
+# Clean up old checkpoints (keep latest 3)
+./manage_checkpoints.sh cleanup 3
+
+# Setup checkpoint directory
+./manage_checkpoints.sh setup
+
+# Or use Python directly
+conda activate agentic_control && python 05_training/checkpoint_config.py --status
+```
+
+### Manual Management
+```bash
+# View checkpoint directory
+ls -la /scratch/$USER/agentic_control_checkpoints/
+
+# Check disk usage
+du -sh /scratch/$USER/agentic_control_checkpoints/
+```
+
 ## Dependencies
 
 - Core: `numpy`, `scipy`, `matplotlib`

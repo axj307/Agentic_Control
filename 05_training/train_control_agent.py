@@ -19,6 +19,10 @@ import time
 import json
 from typing import List, Dict, Any
 
+# Configure checkpoint directory BEFORE any transformers imports
+from checkpoint_config import setup_checkpoint_directory
+checkpoint_dir = setup_checkpoint_directory()
+
 # Add necessary paths
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '01_basic_physics'))
 

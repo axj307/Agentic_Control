@@ -8,6 +8,10 @@ Adapts ART framework for control system training using patterns from:
 - agentic_control_langgraph/agents/langgraph/art_rollout.py (tool integration)
 """
 
+# Configure checkpoint directory BEFORE any transformers imports
+from checkpoint_config import setup_checkpoint_directory
+checkpoint_dir = setup_checkpoint_directory()
+
 import asyncio
 import json
 import numpy as np
