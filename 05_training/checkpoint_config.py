@@ -13,15 +13,45 @@ uses HuggingFace transformers checkpointing.
 import os
 import getpass
 from pathlib import Path
+import subprocess
 
-def setup_checkpoint_directory():
-    """Setup checkpoint directory on /scratch and configure transformers."""
+def get_worktree_identifier():
+    """Get a unique identifier for the current worktree/project."""
+    try:
+        # Try to get git worktree info
+        result = subprocess.run(['git', 'rev-parse', '--show-toplevel'], 
+                              capture_output=True, text=True, cwd=os.getcwd())
+        if result.returncode == 0:
+            git_root = Path(result.stdout.strip())
+            # Use the parent directory name + git root name for uniqueness
+            parent_name = git_root.parent.name
+            repo_name = git_root.name
+            return f"{parent_name}_{repo_name}"
+    except:
+        pass
+    
+    # Fallback: use current directory name + parent
+    current_path = Path.cwd()
+    parent_name = current_path.parent.name
+    current_name = current_path.name
+    return f"{parent_name}_{current_name}"
+
+def setup_checkpoint_directory(project_name=None):
+    """Setup checkpoint directory on /scratch and configure transformers.
+    
+    Args:
+        project_name: Custom project name. If None, auto-detected from worktree.
+    """
     
     # Get current user
     username = getpass.getuser()
     
-    # Create checkpoint directory on scratch
-    scratch_checkpoints = Path(f"/scratch/{username}/agentic_control_checkpoints")
+    # Get unique identifier for this worktree/project
+    if project_name is None:
+        project_name = get_worktree_identifier()
+    
+    # Create checkpoint directory on scratch with worktree-specific name
+    scratch_checkpoints = Path(f"/scratch/{username}/checkpoints_{project_name}")
     scratch_checkpoints.mkdir(parents=True, exist_ok=True)
     
     print(f"📁 Checkpoint directory: {scratch_checkpoints}")
@@ -47,10 +77,16 @@ def setup_checkpoint_directory():
         print("⚠️  Transformers not available - checkpoint configuration skipped")
         return str(scratch_checkpoints)
 
-def get_checkpoint_dir():
-    """Get the configured checkpoint directory path."""
+def get_checkpoint_dir(project_name=None):
+    """Get the configured checkpoint directory path.
+    
+    Args:
+        project_name: Custom project name. If None, auto-detected from worktree.
+    """
     username = getpass.getuser()
-    return f"/scratch/{username}/agentic_control_checkpoints"
+    if project_name is None:
+        project_name = get_worktree_identifier()
+    return f"/scratch/{username}/checkpoints_{project_name}"
 
 def cleanup_old_checkpoints(keep_latest=3):
     """Clean up old checkpoints, keeping only the latest N."""
