@@ -151,6 +151,11 @@ class CleanExperimentRunner:
         
         # Plot 1: Position trajectories
         ax1 = axes[0, 0]
+        
+        # Add success zone first (so it's in background)
+        ax1.axhspan(-self.config["position_tolerance"], self.config["position_tolerance"], 
+                   color='green', alpha=0.2, label='Success Zone')
+        
         for i, (pd_traj, tool_traj) in enumerate(zip(pd_trajectories, tool_trajectories)):
             # Convert to numpy arrays and fix time calculation
             pd_time = np.array(pd_traj['times'])
@@ -176,6 +181,11 @@ class CleanExperimentRunner:
         
         # Plot 2: Velocity trajectories  
         ax2 = axes[0, 1]
+        
+        # Add velocity success zone
+        ax2.axhspan(-self.config["velocity_tolerance"], self.config["velocity_tolerance"], 
+                   color='green', alpha=0.2, label='Success Zone')
+        
         for i, (pd_traj, tool_traj) in enumerate(zip(pd_trajectories, tool_trajectories)):
             pd_time = np.array(pd_traj['times'])
             tool_time = np.array(tool_traj['times'])
@@ -227,6 +237,16 @@ class CleanExperimentRunner:
         
         # Plot 4: Phase portraits
         ax4 = axes[1, 1]
+        
+        # Add success zone rectangle in phase space
+        from matplotlib.patches import Rectangle
+        success_zone = Rectangle(
+            (-self.config["position_tolerance"], -self.config["velocity_tolerance"]),
+            2*self.config["position_tolerance"], 2*self.config["velocity_tolerance"],
+            facecolor='green', alpha=0.2, label='Success Zone'
+        )
+        ax4.add_patch(success_zone)
+        
         for i, (pd_traj, tool_traj) in enumerate(zip(pd_trajectories, tool_trajectories)):
             ax4.plot(pd_traj['positions'], pd_traj['velocities'],
                     color=colors["pd"], linewidth=config["linewidth"],

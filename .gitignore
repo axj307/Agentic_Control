@@ -4,6 +4,23 @@ __pycache__/
 *$py.class
 *.so
 .Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
 env/
 venv/
 ENV/
@@ -14,32 +31,57 @@ venv.bak/
 # Jupyter Notebook
 .ipynb_checkpoints
 
-# Results and logs
-results/archive_*/
+# IDE & OS
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+
+# Logs and output files
 logs/
+*.log
 *.out
 *.err
 
-# Temporary files
-*.tmp
-*.temp
-.DS_Store
-.vscode/
-.idea/
+# Large auto-generated caches
+05_training/unsloth_compiled_cache/
+*/unsloth_compiled_cache/
+05_training/.art/
+*/.art/
 
-# Model files (keep structure, ignore large model files)
+# Temporary test directories  
+test_art_data/
+test_art_models/
+test_art_results/
+*_temp/
+*_test/
+
+# Results management (managed by clean_results.py)
+results/archive_*/
+
+# Keep only latest results (auto-managed)
+results/data/*.json
+results/plots/*.png
+results/reports/*.md
+
+# But preserve README files
+!results/README.md
+!results/data/.gitkeep  
+!results/plots/.gitkeep
+!results/reports/.gitkeep
+
+# Keep essential example results for demo
+!results/data/pd_vs_tool_trajectories_20250903_173133.json
+!results/plots/pd_vs_tool_comparison_20250903_173133.png
+!results/reports/pd_vs_tool_analysis_20250903_173133.md
+
+# Model files (keep configs, ignore large binaries)
 05_training/art_models/*.pt
-05_training/art_models/*.pth
+05_training/art_models/*.pth  
 05_training/art_models/*.pkl
-!05_training/art_models/.gitkeep
 !05_training/art_models/linear_baseline.json
-
-# Keep current results but ignore future archives
-results/data/pd_vs_tool_trajectories_*.json
-results/plots/pd_vs_tool_comparison_*.png  
-results/reports/pd_vs_tool_analysis_*.md
-
-# But keep the latest for demo purposes
-!results/data/pd_vs_tool_trajectories_20250903_152224.json
-!results/plots/pd_vs_tool_comparison_20250903_152224.png
-!results/reports/pd_vs_tool_analysis_20250903_152224.md

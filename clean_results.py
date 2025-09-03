@@ -1,13 +1,204 @@
 #!/usr/bin/env python3
 """
-Clean Results Directory
-Organizes and archives old results, keeps only latest standardized files
+Advanced Results Management System
+==================================
+
+Automatically manages experimental results to prevent storage bloat:
+- Keeps only the latest N results per type
+- Archives older results in compressed format  
+- Maintains clean directory structure
+- Provides comprehensive status reporting
+- Smart file categorization and cleanup
+
+Usage:
+    python clean_results.py                    # Interactive cleanup
+    python clean_results.py --status           # Show current status
+    python clean_results.py --keep-latest 3    # Keep 3 latest per group
+    python clean_results.py --auto-clean       # Non-interactive cleanup
 """
 
 import os
 import shutil
+import zipfile
+import argparse
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
+from typing import Dict, List, Tuple
+import json
+
+def get_file_size_mb(file_path: Path) -> float:
+    """Get file size in MB."""
+    return file_path.stat().st_size / (1024 * 1024)
+
+def extract_timestamp_from_filename(filename: str) -> datetime:
+    """Extract timestamp from filename pattern."""
+    import re
+    pattern = r'(\d{8}_\d{6})'
+    match = re.search(pattern, filename)
+    
+    if match:
+        try:
+            return datetime.strptime(match.group(1), '%Y%m%d_%H%M%S')
+        except ValueError:
+            pass
+    
+    # Fallback to current time for files without timestamp
+    return datetime.now()
+
+def categorize_results_files(results_dir: Path) -> Dict[str, List[Tuple[Path, datetime]]]:
+    """Categorize and timestamp all results files."""
+    categories = {
+        'pd_vs_tool_trajectories': [],
+        'pd_vs_tool_comparison': [], 
+        'pd_vs_tool_analysis': [],
+        'comparison_results': [],
+        'art_analysis': [],
+        'enhanced_plots': [],
+        'experiment_reports': [],
+        'other': []
+    }
+    
+    # Scan all subdirectories
+    for subdir in ['data', 'plots', 'reports']:
+        subdir_path = results_dir / subdir
+        if not subdir_path.exists():
+            continue
+            
+        for file_path in subdir_path.glob('*'):
+            if file_path.is_file():
+                filename = file_path.name
+                timestamp = extract_timestamp_from_filename(filename)
+                
+                # Categorize based on filename patterns
+                if 'pd_vs_tool_trajectories' in filename:
+                    categories['pd_vs_tool_trajectories'].append((file_path, timestamp))
+                elif 'pd_vs_tool_comparison' in filename:
+                    categories['pd_vs_tool_comparison'].append((file_path, timestamp))
+                elif 'pd_vs_tool_analysis' in filename:
+                    categories['pd_vs_tool_analysis'].append((file_path, timestamp))
+                elif 'comparison_results' in filename:
+                    categories['comparison_results'].append((file_path, timestamp))
+                elif 'art_analysis' in filename or 'simple_art' in filename:
+                    categories['art_analysis'].append((file_path, timestamp))
+                elif 'enhanced_comparison' in filename:
+                    categories['enhanced_plots'].append((file_path, timestamp))
+                elif 'experiment_summary' in filename or 'comparison_report' in filename:
+                    categories['experiment_reports'].append((file_path, timestamp))
+                else:
+                    categories['other'].append((file_path, timestamp))
+    
+    # Sort each category by timestamp (newest first)
+    for category in categories.values():
+        category.sort(key=lambda x: x[1], reverse=True)
+    
+    return categories
+
+def print_results_status(results_dir: Path):
+    """Print detailed status of results directory."""
+    if not results_dir.exists():
+        print("❌ Results directory not found!")
+        return
+    
+    categories = categorize_results_files(results_dir)
+    
+    print("📊 RESULTS DIRECTORY STATUS")
+    print("=" * 60)
+    
+    total_files = 0
+    total_size_mb = 0
+    
+    for category_name, files in categories.items():
+        if not files:
+            continue
+            
+        count = len(files)
+        size_mb = sum(get_file_size_mb(f[0]) for f in files)
+        latest = files[0][1].strftime('%Y-%m-%d %H:%M:%S') if files else 'None'
+        
+        print(f"📁 {category_name:25}: {count:3} files, {size_mb:6.1f} MB, latest: {latest}")
+        
+        total_files += count
+        total_size_mb += size_mb
+    
+    print("-" * 60)
+    print(f"📈 TOTAL: {total_files:3} files, {total_size_mb:6.1f} MB")
+    
+    # Show directory breakdown
+    print(f"\n📂 DIRECTORY BREAKDOWN:")
+    for subdir in ['data', 'plots', 'reports']:
+        subdir_path = results_dir / subdir
+        if subdir_path.exists():
+            files = list(subdir_path.glob('*'))
+            size_mb = sum(get_file_size_mb(f) for f in files if f.is_file())
+            print(f"   {subdir:10}: {len(files):3} files, {size_mb:6.1f} MB")
+    
+    # Check for archives
+    archives = list(results_dir.glob('archive_*'))
+    if archives:
+        print(f"\n📦 ARCHIVES: {len(archives)} archive directories found")
+        for archive in archives[-3:]:  # Show latest 3 archives
+            files = list(archive.rglob('*'))
+            file_count = len([f for f in files if f.is_file()])
+            print(f"   {archive.name}: {file_count} files")
+
+def smart_cleanup(results_dir: Path, keep_latest: int = 3, dry_run: bool = False):
+    """Intelligent cleanup keeping latest N files per category."""
+    categories = categorize_results_files(results_dir)
+    
+    print(f"🧹 SMART CLEANUP (keeping latest {keep_latest} per category)")
+    print("=" * 60)
+    
+    if dry_run:
+        print("🔍 DRY RUN MODE - showing what would be cleaned")
+        print()
+    
+    # Create archive directory
+    archive_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    archive_dir = results_dir / f"archive_{archive_timestamp}"
+    
+    files_to_remove = []
+    total_saved_mb = 0
+    
+    for category_name, files in categories.items():
+        if len(files) <= keep_latest:
+            print(f"✅ {category_name:25}: {len(files)} files (no cleanup needed)")
+            continue
+        
+        old_files = files[keep_latest:]
+        category_size_mb = sum(get_file_size_mb(f[0]) for f in old_files)
+        
+        print(f"🗑️  {category_name:25}: removing {len(old_files)} old files ({category_size_mb:.1f} MB)")
+        
+        for file_path, timestamp in old_files:
+            files_to_remove.append(file_path)
+            total_saved_mb += get_file_size_mb(file_path)
+            print(f"     - {file_path.name}")
+    
+    print(f"\n💾 TOTAL SPACE TO SAVE: {total_saved_mb:.1f} MB")
+    
+    if not files_to_remove:
+        print("✨ No cleanup needed - directory is already optimal!")
+        return
+    
+    if dry_run:
+        print("\n🔍 This was a dry run. Remove --dry-run to execute cleanup.")
+        return
+    
+    # Actually remove files
+    if not archive_dir.exists():
+        archive_dir.mkdir()
+        for subdir in ['data', 'plots', 'reports']:
+            (archive_dir / subdir).mkdir()
+    
+    for file_path in files_to_remove:
+        # Move to archive instead of deleting
+        relative_path = file_path.relative_to(results_dir)
+        archive_path = archive_dir / relative_path
+        archive_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(file_path), str(archive_path))
+    
+    print(f"\n✅ Cleanup completed!")
+    print(f"📦 Old files archived to: {archive_dir.name}")
 
 def clean_results_directory():
     """Clean and organize the results directory"""
@@ -141,22 +332,60 @@ def clean_logs_directory():
         print("   ✅ Log directory already clean")
 
 if __name__ == "__main__":
-    print("🧹 Results Directory Cleanup Tool")
-    print("=" * 50)
+    parser = argparse.ArgumentParser(
+        description="Advanced Results Management System",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+    python clean_results.py --status              # Show current status  
+    python clean_results.py --keep-latest 3       # Keep 3 latest per type
+    python clean_results.py --dry-run             # Preview what would be cleaned
+    python clean_results.py --auto-clean          # Non-interactive cleanup
+        """
+    )
     
-    # Show current state
+    parser.add_argument("--status", action="store_true", 
+                       help="Show detailed status of results directory")
+    parser.add_argument("--keep-latest", type=int, default=3,
+                       help="Number of latest files to keep per category (default: 3)")
+    parser.add_argument("--dry-run", action="store_true",
+                       help="Show what would be cleaned without making changes") 
+    parser.add_argument("--auto-clean", action="store_true",
+                       help="Run automatic cleanup without interactive prompts")
+    
+    args = parser.parse_args()
+    
     results_dir = Path("results")
-    if results_dir.exists():
-        total_files = sum(len(list(subdir.glob("*"))) for subdir in results_dir.iterdir() if subdir.is_dir())
-        print(f"📊 Current state: {total_files} files in results/")
     
-    # Confirm cleanup
-    response = input("\n🤔 Proceed with cleanup? This will archive old files (y/N): ")
-    
-    if response.lower() in ['y', 'yes']:
-        clean_results_directory()
-        clean_logs_directory()
-        print(f"\n🎉 Cleanup completed! Your results directory is now organized.")
-        print(f"💡 Old files are safely archived and can be restored if needed.")
+    if args.status:
+        print_results_status(results_dir)
+    elif args.auto_clean:
+        print("🤖 AUTOMATIC CLEANUP MODE")
+        print("=" * 50)
+        smart_cleanup(results_dir, keep_latest=args.keep_latest, dry_run=args.dry_run)
+        if not args.dry_run:
+            clean_logs_directory()
     else:
-        print("❌ Cleanup cancelled.")
+        # Interactive mode
+        print("🧹 ADVANCED RESULTS MANAGEMENT SYSTEM")
+        print("=" * 50)
+        
+        print_results_status(results_dir)
+        
+        if not results_dir.exists():
+            print("❌ No results directory found. Nothing to clean.")
+            exit(0)
+            
+        print(f"\n🤔 Proceed with smart cleanup (keep latest {args.keep_latest} per category)?")
+        
+        if args.dry_run:
+            print("🔍 Running in DRY RUN mode - no files will be modified")
+            smart_cleanup(results_dir, keep_latest=args.keep_latest, dry_run=True)
+        else:
+            response = input("   Continue? (y/N): ")
+            if response.lower() in ['y', 'yes']:
+                smart_cleanup(results_dir, keep_latest=args.keep_latest)
+                clean_logs_directory()
+                print(f"\n🎉 Cleanup completed! Directory is optimized.")
+            else:
+                print("❌ Cleanup cancelled.")

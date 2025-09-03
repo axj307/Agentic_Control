@@ -13,34 +13,14 @@ import json
 import numpy as np
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
+from pydantic import BaseModel
 
-# ART framework - ALREADY INSTALLED
-try:
-    import art
-    from art import TrainableModel, Trajectory, TrajectoryGroup
-    ART_AVAILABLE = True
-    print("✅ ART library imported successfully")
-except ImportError:
-    print("❌ ART library not found. Install with: pip install openpipe-art")
-    ART_AVAILABLE = False
-    # Create mock classes for development
-    class TrainableModel:
-        def __init__(self, **kwargs):
-            self.name = kwargs.get('model_name', 'mock_model')
-        def openai_client(self):
-            return None
-        async def train(self, groups):
-            print("Mock training (ART not available)")
-    
-    class Trajectory:
-        def __init__(self, messages, reward, metadata=None):
-            self.messages = messages
-            self.reward = reward
-            self.metadata = metadata or {}
-    
-    class TrajectoryGroup:
-        def __init__(self, trajectories):
-            self.trajectories = trajectories
+# ART framework - Now properly imported
+import art
+from art import TrainableModel, Trajectory, TrajectoryGroup
+from art import gather_trajectory_groups, TrainConfig
+from art.utils import iterate_dataset
+print("✅ ART library imported successfully")
 
 # Import your existing components
 import sys
@@ -50,6 +30,17 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '02_direct_control
 
 from double_integrator import DoubleIntegrator
 
+
+class ControlPolicyConfig(BaseModel):
+    """Configuration for control policy training"""
+    max_turns: int = 50
+    max_tokens: int = 200
+    temperature: float = 0.3
+    groups_per_step: int = 4
+    trajectories_per_group: int = 4
+    learning_rate: float = 1e-5
+    num_epochs: int = 1
+    eval_steps: int = 10
 
 @dataclass
 class ControlScenario:
@@ -80,17 +71,24 @@ class ARTControlTrainer:
         }
         
     async def initialize_model(self):
-        """Initialize ART model (uses existing vLLM setup)"""
-        if not ART_AVAILABLE:
-            print("⚠️ ART not available - using mock model")
-            self.model = TrainableModel(model_name=self.model_name)
-            return
-            
+        """Initialize ART model with proper configuration"""
+        from art.local import LocalBackend
+        
+        # Initialize ART TrainableModel with control-specific configuration
+        config = ControlPolicyConfig()
         self.model = TrainableModel(
-            model_name=self.model_name,
-            base_model="Qwen/Qwen2.5-1.5B-Instruct"
+            name=self.model_name,
+            project="agentic_control_minimal",
+            base_model="Qwen/Qwen2.5-1.5B-Instruct",  # Smaller model for faster training
+            inference_model_name="Qwen/Qwen2.5-1.5B-Instruct",
+            config=config
         )
-        print(f"✅ ART model initialized: {self.model_name}")
+        
+        # Register model with local backend to enable OpenAI client
+        self.backend = LocalBackend()
+        await self.model.register(self.backend)
+        
+        print(f"✅ ART model initialized and registered: {self.model_name}")
         
     def create_training_scenarios(self) -> List[ControlScenario]:
         """Create scenarios for training (matching your existing test scenarios)"""
@@ -211,36 +209,27 @@ Time Remaining: {scenario.max_steps - step} steps"""
         
         messages_and_choices.append({"role": "user", "content": observation})
         
-        # Get model response (ART handles this automatically)
-        if ART_AVAILABLE and hasattr(model, 'openai_client'):
-            try:
-                client = model.openai_client()
-                response = await client.chat.completions.create(
-                    model=model.name,
-                    messages=[
-                        {"role": "system", "content": system_prompt}, 
-                        {"role": "user", "content": observation}
-                    ],
-                    max_tokens=200,
-                    temperature=0.3
-                )
-                agent_response = response.choices[0].message.content
-            except Exception as e:
-                print(f"⚠️ Model call failed: {e}, using fallback")
-                # Fallback PD control response
-                pd_action = max(-1.0, min(1.0, pos_error * 1.0 + vel_error * 2.0))
-                agent_response = json.dumps({
-                    "action": pd_action,
-                    "reasoning": f"Fallback PD control: kp*pos_error + kd*vel_error = {pd_action:.3f}",
-                    "confidence": 0.5
-                })
-        else:
-            # Mock response for development
-            pd_action = max(-1.0, min(1.0, pos_error * 0.8 + vel_error * 1.5))
+        # Get model response through ART's openai interface
+        try:
+            client = model.openai_client()
+            response = await client.chat.completions.create(
+                model=model.inference_model_name,
+                messages=[
+                    {"role": "system", "content": system_prompt}, 
+                    {"role": "user", "content": observation}
+                ],
+                max_tokens=200,
+                temperature=0.3
+            )
+            agent_response = response.choices[0].message.content
+        except Exception as e:
+            print(f"⚠️ Model call failed: {e}, using fallback PD controller")
+            # Fallback PD control response
+            pd_action = max(-1.0, min(1.0, pos_error * 1.0 + vel_error * 2.0))
             agent_response = json.dumps({
                 "action": pd_action,
-                "reasoning": f"Mock PD control with noise: error-based action = {pd_action:.3f}",
-                "confidence": 0.7
+                "reasoning": f"Fallback PD control: kp*pos_error + kd*vel_error = {pd_action:.3f}",
+                "confidence": 0.5
             })
         
         messages_and_choices.append({"role": "assistant", "content": agent_response})
@@ -269,33 +258,34 @@ Time Remaining: {scenario.max_steps - step} steps"""
     trainer = ARTControlTrainer()  # Temporary instance for reward calculation
     reward = trainer.calculate_control_reward(env, scenario, success, step_count)
     
-    # Create trajectory metadata
+    # Create trajectory metadata (simplified for ART compatibility)
     final_pos, final_vel = env.get_state()
     metadata = {
         'scenario': scenario.name,
         'approach': 'direct_control',
         'success': success,
         'steps': step_count,
-        'final_position': final_pos,
-        'final_velocity': final_vel,
-        'final_pos_error': abs(final_pos - scenario.target_position),
-        'final_vel_error': abs(final_vel - scenario.target_velocity),
-        'control_effort': sum(abs(u) for u in env.history['control']),
+        'final_position': float(final_pos),
+        'final_velocity': float(final_vel),
+        'final_pos_error': float(abs(final_pos - scenario.target_position)),
+        'final_vel_error': float(abs(final_vel - scenario.target_velocity)),
+        'control_effort': float(sum(abs(u) for u in env.history['control'])),
         'difficulty': scenario.difficulty,
-        'reward_components': {
-            'success_bonus': 10.0 if success else 0.0,
-            'position_penalty': -abs(final_pos - scenario.target_position) * 5.0,
-            'velocity_penalty': -abs(final_vel - scenario.target_velocity) * 3.0,
-            'control_penalty': -sum(abs(u) for u in env.history['control']) * 0.1,
-            'time_penalty': -step_count * 0.05
-        }
+        'success_bonus': float(10.0 if success else 0.0),
+        'position_penalty': float(-abs(final_pos - scenario.target_position) * 5.0),
+        'velocity_penalty': float(-abs(final_vel - scenario.target_velocity) * 3.0),
+        'control_penalty': float(-sum(abs(u) for u in env.history['control']) * 0.1),
+        'time_penalty': float(-step_count * 0.05)
     }
     
-    return Trajectory(
+    # Create proper ART Trajectory
+    trajectory = Trajectory(
         messages_and_choices=messages_and_choices,
         reward=reward,
         metadata=metadata
     )
+    trajectory.finish()  # Mark trajectory as complete
+    return trajectory
 
 
 async def tool_augmented_rollout(model: TrainableModel, scenario: ControlScenario) -> Trajectory:
@@ -420,29 +410,32 @@ Available tools: analyze_errors, calculate_pid, plan_trajectory, verify_safety""
     efficiency_bonus = 1.0 if success and step_count < scenario.max_steps * 0.8 else 0.0
     total_reward = base_reward + tool_bonus + efficiency_bonus
     
-    # Enhanced metadata
+    # Enhanced metadata (simplified for ART compatibility)
     final_pos, final_vel = env.get_state()
     metadata = {
         'scenario': scenario.name,
         'approach': 'tool_augmented',
         'success': success,
         'steps': step_count,
-        'final_position': final_pos,
-        'final_velocity': final_vel,
-        'final_pos_error': abs(final_pos - scenario.target_position),
-        'final_vel_error': abs(final_vel - scenario.target_velocity),
-        'control_effort': sum(abs(u) for u in env.history['control']),
+        'final_position': float(final_pos),
+        'final_velocity': float(final_vel),
+        'final_pos_error': float(abs(final_pos - scenario.target_position)),
+        'final_vel_error': float(abs(final_vel - scenario.target_velocity)),
+        'control_effort': float(sum(abs(u) for u in env.history['control'])),
         'difficulty': scenario.difficulty,
         'tool_usage_count': tool_usage_count,
         'interpretable_reasoning': True,
-        'tool_bonus': tool_bonus,
-        'efficiency_bonus': efficiency_bonus,
-        'base_reward': base_reward,
-        'total_reward': total_reward
+        'tool_bonus': float(tool_bonus),
+        'efficiency_bonus': float(efficiency_bonus),
+        'base_reward': float(base_reward),
+        'total_reward': float(total_reward)
     }
     
-    return Trajectory(
+    # Create proper ART Trajectory
+    trajectory = Trajectory(
         messages_and_choices=messages_and_choices,
         reward=total_reward,
         metadata=metadata
     )
+    trajectory.finish()  # Mark trajectory as complete
+    return trajectory
