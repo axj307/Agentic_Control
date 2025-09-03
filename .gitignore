@@ -64,6 +64,10 @@ test_art_results/
 *_temp/
 *_test/
 
+# ART training directories (created automatically by training scripts)
+05_training/art_data/
+05_training/art_models/
+
 # Results management (managed by clean_results.py)
 results/archive_*/
 
