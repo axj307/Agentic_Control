@@ -1,0 +1,208 @@
+{
+  "original_analysis": {
+    "pd": {
+      "count": 3,
+      "rewards": [
+        61.69255253119629,
+        68.89487815038636,
+        89.9266985
+      ],
+      "reward_breakdown": {
+        "success": [
+          100.0,
+          100.0,
+          100.0
+        ],
+        "efficiency": [
+          -30.0,
+          -23.0,
+          -3.0
+        ],
+        "smoothness": [
+          -0.05949395699356752,
+          -0.03461181992633551,
+          -0.011529000000000001
+        ],
+        "final_error": [
+          -8.247953511810143,
+          -8.070510029687295,
+          -7.061772500000001
+        ]
+      },
+      "performance": {
+        "success_rate": 1.0,
+        "avg_steps": 18.666666666666668,
+        "avg_control_effort": 1.9139072851128605
+      },
+      "scenarios": {
+        "small_pos_right": [
+          {
+            "reward": 61.69255253119629,
+            "success": true,
+            "steps": 30,
+            "control_effort": 3.102756160284791
+          }
+        ],
+        "small_pos_left": [
+          {
+            "reward": 68.89487815038636,
+            "success": true,
+            "steps": 23,
+            "control_effort": 1.61625569505379
+          }
+        ],
+        "small_vel": [
+          {
+            "reward": 89.9266985,
+            "success": true,
+            "steps": 3,
+            "control_effort": 1.02271
+          }
+        ]
+      },
+      "reward_stats": {
+        "mean": 73.50470972719421,
+        "std": 11.97858255448253,
+        "min": 61.69255253119629,
+        "max": 89.9266985,
+        "positive_ratio": 1.0
+      }
+    },
+    "tool": {
+      "count": 3,
+      "rewards": [
+        68.16445,
+        72.72964499999999,
+        89.92664500000001
+      ],
+      "reward_breakdown": {
+        "success": [
+          100.0,
+          100.0,
+          100.0
+        ],
+        "efficiency": [
+          -23.0,
+          -19.0,
+          -3.0
+        ],
+        "smoothness": [
+          -0.1258,
+          -0.06837999999999998,
+          -0.011530000000000002
+        ],
+        "final_error": [
+          -8.709750000000001,
+          -8.201975000000001,
+          -7.061825000000001
+        ]
+      },
+      "performance": {
+        "success_rate": 1.0,
+        "avg_steps": 15.0,
+        "avg_control_effort": 2.6258
+      },
+      "scenarios": {
+        "small_pos_right": [
+          {
+            "reward": 68.16445,
+            "success": true,
+            "steps": 23,
+            "control_effort": 4.4628000000000005
+          }
+        ],
+        "small_pos_left": [
+          {
+            "reward": 72.72964499999999,
+            "success": true,
+            "steps": 19,
+            "control_effort": 2.3918999999999997
+          }
+        ],
+        "small_vel": [
+          {
+            "reward": 89.92664500000001,
+            "success": true,
+            "steps": 3,
+            "control_effort": 1.0227
+          }
+        ]
+      },
+      "reward_stats": {
+        "mean": 76.94024666666667,
+        "std": 9.369993155494065,
+        "min": 68.16445,
+        "max": 89.92664500000001,
+        "positive_ratio": 1.0
+      }
+    }
+  },
+  "recommendations": {
+    "timestamp": "20250903_153053",
+    "baseline_comparison": {
+      "pd_mean_reward": 73.50470972719421,
+      "tool_mean_reward": 76.94024666666667,
+      "reward_improvement": 3.435536939472456,
+      "pd_success_rate": 1.0,
+      "tool_success_rate": 1.0
+    },
+    "training_targets": [
+      {
+        "scenario": "small_pos_right",
+        "current_avg_reward": 68.16445,
+        "improvement_potential": 21.762195000000006
+      },
+      {
+        "scenario": "small_pos_left",
+        "current_avg_reward": 72.72964499999999,
+        "improvement_potential": 17.197000000000017
+      }
+    ],
+    "reward_insights": {
+      "success": {
+        "mean": 100.0,
+        "std": 0.0,
+        "improvement_needed": false
+      },
+      "efficiency": {
+        "mean": -15.0,
+        "std": 8.640987597877148,
+        "improvement_needed": true
+      },
+      "smoothness": {
+        "mean": -0.06856999999999999,
+        "std": 0.04665072561064833,
+        "improvement_needed": true
+      },
+      "final_error": {
+        "mean": -7.991183333333335,
+        "std": 0.6890762156483291,
+        "improvement_needed": true
+      }
+    },
+    "recommended_config": {
+      "focus_scenarios": [
+        "small_pos_right",
+        "small_pos_left"
+      ],
+      "reward_weights": {
+        "w_success": 100.0,
+        "w_efficiency": -0.5,
+        "w_smoothness": -0.2,
+        "w_final_error": -75.0
+      },
+      "training_iterations": 6
+    }
+  },
+  "simulated_improvements": {
+    "reward_increase": 15.0,
+    "efficiency_gain": 8.0,
+    "smoothness_improvement": 25.0,
+    "success_rate_gain": 0.0
+  },
+  "projected_performance": {
+    "avg_reward": 91.94024666666667,
+    "avg_steps": 13.8,
+    "success_rate": 1.0
+  }
+}
